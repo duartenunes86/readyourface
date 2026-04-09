@@ -14,7 +14,9 @@ if not _data_dir.exists():
 DB = _data_dir / "users.db"
 
 def load_env():
-    keys = {}
+    # Start with OS environment variables (used on Render)
+    keys = dict(os.environ)
+    # Override/supplement with .env file if it exists (used locally)
     env_file = ROOT / ".env"
     if env_file.exists():
         for line in env_file.read_text().splitlines():
