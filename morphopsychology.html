@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Readyourface.net</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: #f9f7f4; color: #1a1a1a; min-height: 100vh; padding: 2.5rem 1rem 4rem; }
+.app { max-width: 660px; margin: 0 auto; }
+
+/* Header */
+.header { text-align: center; margin-bottom: 2rem; }
+.header h1 { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 400; letter-spacing: 0.3px; }
+.header p { font-size: 13px; color: #999; font-style: italic; margin-top: 4px; }
+
+/* User bar */
+.user-bar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-bottom: 1.25rem; font-size: 13px; }
+.user-bar .credits-badge { background: #eeedfe; color: #3c3489; padding: 4px 12px; border-radius: 20px; font-weight: 500; font-size: 12px; }
+.user-bar .user-name { color: #555; }
+.user-bar a { color: #aaa; font-size: 12px; cursor: pointer; text-decoration: underline; }
+
+/* Drop zone */
+.drop-zone { border: 1.5px dashed #ccc; border-radius: 14px; padding: 2.5rem; text-align: center; cursor: pointer; background: #fff; margin-bottom: 1rem; transition: background 0.2s; }
+.drop-zone:hover { background: #f5f3f0; }
+.drop-zone.has-image { padding: 0; border-style: solid; overflow: hidden; }
+.drop-zone img { width: 100%; max-height: 320px; object-fit: cover; display: block; border-radius: 13px; }
+.drop-icon { font-size: 28px; color: #ccc; margin-bottom: 8px; }
+.drop-zone .hint { font-size: 14px; color: #888; margin-bottom: 4px; }
+.drop-zone .hint2 { font-size: 12px; color: #bbb; }
+
+/* Buttons */
+.btn { width: 100%; padding: 13px; background: #1a1a1a; color: #fff; border: none; border-radius: 10px; font-family: 'Playfair Display', serif; font-size: 16px; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.15s; margin-bottom: 2rem; }
+.btn:hover { opacity: 0.85; }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* Messages */
+.error-msg { background: #fff0f0; color: #a32d2d; padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-bottom: 1.25rem; border: 1px solid #ffd0d0; }
+.running-hint { text-align: center; color: #aaa; font-size: 13px; margin-bottom: 1.5rem; font-style: italic; }
+
+/* Result */
+.result-card { background: #fff; border: 1px solid #e0ddd8; border-radius: 16px; padding: 2.5rem 2.5rem 2rem; }
+.result-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: #bbb; margin-bottom: 1.25rem; font-family: 'DM Sans', sans-serif; }
+.result-text { font-family: 'Playfair Display', serif; font-size: 17px; line-height: 1.85; color: #1a1a1a; }
+.result-text p + p { margin-top: 1.1em; }
+.result-text strong, .result-text b { font-weight: 500; }
+
+/* Disclaimer */
+.disclaimer { margin-top: 1.25rem; font-size: 12px; color: #aaa; text-align: center; line-height: 1.6; }
+.disclaimer a { color: #999; text-decoration: underline; }
+
+/* Spinner */
+.spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Modal overlay */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: #fff; border-radius: 18px; padding: 2rem; width: 100%; max-width: 420px; margin: 1rem; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+.modal h2 { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 400; margin-bottom: 6px; }
+.modal .sub { font-size: 13px; color: #888; margin-bottom: 1.5rem; }
+.modal-tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+.modal-tab { flex: 1; padding: 9px; font-size: 13px; font-family: 'DM Sans', sans-serif; border: none; background: #fafafa; cursor: pointer; transition: background 0.15s; }
+.modal-tab.active { background: #1a1a1a; color: #fff; }
+.modal-input { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; margin-bottom: 10px; background: #fafafa; }
+.modal-input:focus { outline: none; border-color: #999; }
+.modal-btn { width: 100%; padding: 11px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; cursor: pointer; margin-bottom: 10px; transition: opacity 0.15s; }
+.modal-btn:hover { opacity: 0.85; }
+.modal-btn.google { background: #fff; color: #333; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.modal-btn.google:hover { background: #f5f5f5; }
+.modal-divider { text-align: center; font-size: 12px; color: #bbb; margin: 10px 0; }
+.modal-error { color: #a32d2d; font-size: 12px; margin-bottom: 8px; }
+
+/* Payment options */
+.pack-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.25rem; }
+.pack-card { border: 1.5px solid #e0e0e0; border-radius: 12px; padding: 1.25rem 1rem; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.pack-card:hover { border-color: #1a1a1a; background: #fafaf9; }
+.pack-card .pack-price { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 500; }
+.pack-card .pack-label { font-size: 12px; color: #888; margin-top: 4px; }
+.pack-card .pack-unit { font-size: 11px; color: #bbb; margin-top: 2px; }
+.pack-card.best { border-color: #3c3489; background: #f5f4ff; }
+.pack-card.best .pack-label { color: #3c3489; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>Readyourface.net</h1>
+    <p>An app that reads your personality by your face</p>
+  </div>
+
+  <div class="user-bar" id="user-bar" style="display:none">
+    <span class="user-name" id="user-name"></span>
+    <span class="credits-badge" id="credits-badge"></span>
+    <a onclick="logout()">Log out</a>
+  </div>
+
+  <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <div class="drop-icon">↑</div>
+    <div class="hint">Upload a portrait photo</div>
+    <div class="hint2">JPG, PNG or WEBP · front-facing, good light</div>
+  </div>
+  <input type="file" id="file-input" accept="image/*" style="display:none">
+
+  <button class="btn" id="btn" disabled onclick="onAnalyzeClick()">Read this face</button>
+
+  <div id="error-box"></div>
+  <div id="hint-box"></div>
+  <div id="result-box"></div>
+</div>
+
+<!-- Login / Register modal -->
+<div class="modal-overlay" id="auth-modal">
+  <div class="modal">
+    <h2>Sign in to continue</h2>
+    <p class="sub">You need an account to use your credits.</p>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tab-login" onclick="switchTab('login')">Log in</button>
+      <button class="modal-tab" id="tab-register" onclick="switchTab('register')">Register</button>
+    </div>
+    <div id="auth-error" class="modal-error" style="display:none"></div>
+    <div id="register-name-row" style="display:none">
+      <input class="modal-input" id="auth-name" type="text" placeholder="Your name">
+    </div>
+    <input class="modal-input" id="auth-email" type="email" placeholder="Email">
+    <input class="modal-input" id="auth-password" type="password" placeholder="Password">
+    <button class="modal-btn" onclick="submitAuth()">Continue</button>
+    <div class="modal-divider">or</div>
+    <button class="modal-btn google" onclick="loginWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+    <div style="text-align:center;margin-top:12px"><a style="font-size:12px;color:#bbb;cursor:pointer" onclick="closeModal('auth-modal')">Cancel</a></div>
+  </div>
+</div>
+
+<!-- Buy credits modal -->
+<div class="modal-overlay" id="pay-modal">
+  <div class="modal">
+    <h2>Get credits</h2>
+    <p class="sub">Each credit = one face reading.</p>
+    <div class="pack-grid">
+      <div class="pack-card" onclick="buyPack('single')">
+        <div class="pack-price">€5</div>
+        <div class="pack-label">1 analysis</div>
+        <div class="pack-unit">€5 per reading</div>
+      </div>
+      <div class="pack-card best" onclick="buyPack('pack')">
+        <div class="pack-price">€15</div>
+        <div class="pack-label">10 analyses</div>
+        <div class="pack-unit">€1.50 per reading</div>
+      </div>
+    </div>
+    <div id="pay-error" class="modal-error" style="display:none"></div>
+    <div style="text-align:center"><a style="font-size:12px;color:#bbb;cursor:pointer" onclick="closeModal('pay-modal')">Cancel</a></div>
+  </div>
+</div>
+
+<script>
+let ANTHROPIC_KEY = "";
+let currentUser = null;
+let imageBase64 = null, imageMediaType = null;
+
+// Load config on start
+fetch('/config').then(r => r.json()).then(d => {
+  ANTHROPIC_KEY = d.key || "";
+  if (d.user) setUser(d.user);
+  // Restore image if user was redirected away (Google login or Stripe payment)
+  const pending = sessionStorage.getItem('pendingImage');
+  if (pending) {
+    sessionStorage.removeItem('pendingImage');
+    try {
+      const { data, type } = JSON.parse(pending);
+      imageBase64 = data;
+      imageMediaType = type;
+      const dataUrl = 'data:' + type + ';base64,' + data;
+      dropZone.classList.add('has-image');
+      dropZone.innerHTML = '<img src="' + dataUrl + '" alt="Portrait">';
+      btn.disabled = false;
+      // If logged in and has credits, auto-analyze
+      if (d.user && d.user.credits > 0) onAnalyzeClick();
+    } catch(e) {}
+  }
+});
+
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const btn = document.getElementById('btn');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.opacity = '0.75'; });
+dropZone.addEventListener('dragleave', () => { dropZone.style.opacity = '1'; });
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.style.opacity = '1'; if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+function loadFile(file) {
+  if (!file.type.startsWith('image/')) return showError('Please upload an image file.');
+  clearError();
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const dataUrl = ev.target.result;
+    imageBase64 = dataUrl.split(',')[1];
+    imageMediaType = file.type;
+    dropZone.classList.add('has-image');
+    dropZone.innerHTML = '<img src="' + dataUrl + '" alt="Portrait">';
+    btn.disabled = false;
+    document.getElementById('result-box').innerHTML = '';
+    document.getElementById('hint-box').innerHTML = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function setUser(user) {
+  currentUser = user;
+  const bar = document.getElementById('user-bar');
+  bar.style.display = 'flex';
+  document.getElementById('user-name').textContent = user.name || user.email;
+  document.getElementById('credits-badge').textContent = user.credits + ' credit' + (user.credits !== 1 ? 's' : '');
+}
+
+function logout() {
+  window.location.href = '/auth/logout';
+}
+
+// ── Modal helpers ──────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function switchTab(tab) {
+  const isRegister = tab === 'register';
+  document.getElementById('tab-login').classList.toggle('active', !isRegister);
+  document.getElementById('tab-register').classList.toggle('active', isRegister);
+  document.getElementById('register-name-row').style.display = isRegister ? 'block' : 'none';
+  document.getElementById('auth-error').style.display = 'none';
+}
+
+function loginWithGoogle() {
+  if (imageBase64) sessionStorage.setItem('pendingImage', JSON.stringify({ data: imageBase64, type: imageMediaType }));
+  window.location.href = '/auth/google';
+}
+
+async function submitAuth() {
+  const isRegister = document.getElementById('tab-register').classList.contains('active');
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const name     = document.getElementById('auth-name').value.trim();
+  const errEl    = document.getElementById('auth-error');
+  errEl.style.display = 'none';
+  const url  = isRegister ? '/auth/register' : '/auth/login';
+  const body = isRegister ? { email, password, name } : { email, password };
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await r.json();
+  if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
+  setUser(d);
+  closeModal('auth-modal');
+  // If they were trying to analyze, proceed
+  if (imageBase64) onAnalyzeClick();
+}
+
+// ── Analyze flow ───────────────────────────────────────────────────────────────
+async function onAnalyzeClick() {
+  if (!imageBase64) return showError('Please upload a photo first.');
+  clearError();
+
+  // Step 1: must be logged in
+  if (!currentUser) { openModal('auth-modal'); return; }
+
+  // Step 2: must have credits
+  if (currentUser.credits < 1) { openModal('pay-modal'); return; }
+
+  // Step 3: deduct credit server-side then run analysis
+  const cr = await fetch('/use-credit', { method: 'POST' });
+  const cd = await cr.json();
+  if (cd.error === 'not_logged_in') { openModal('auth-modal'); return; }
+  if (cd.error === 'no_credits')    { openModal('pay-modal');  return; }
+
+  // Update badge
+  currentUser.credits = cd.credits;
+  document.getElementById('credits-badge').textContent = cd.credits + ' credit' + (cd.credits !== 1 ? 's' : '');
+
+  await runAnalysis();
+}
+
+async function buyPack(pack) {
+  const errEl = document.getElementById('pay-error');
+  errEl.style.display = 'none';
+  try {
+    const r = await fetch('/create-checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pack }), credentials: 'include' });
+    const d = await r.json();
+    console.log('buyPack response:', d);
+    if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
+    if (d.url) {
+      if (imageBase64) sessionStorage.setItem('pendingImage', JSON.stringify({ data: imageBase64, type: imageMediaType }));
+      window.location.href = d.url;
+    } else { errEl.textContent = 'No URL returned: ' + JSON.stringify(d); errEl.style.display = 'block'; }
+  } catch(e) {
+    errEl.textContent = 'Error: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function runAnalysis() {
+  if (!ANTHROPIC_KEY) return showError('API key not configured.');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Reading...';
+  document.getElementById('result-box').innerHTML = '';
+  document.getElementById('hint-box').innerHTML = '<div class="running-hint">Claude Opus is reading the face — this takes about 20–30 seconds…</div>';
+
+  const SYSTEM = `You are an expert in morphopsychology, physiognomy, and Chinese face reading. Analyze this portrait using exactly these four sections:
+
+**Western Morphopsychology (Louis Corman)**
+
+**Physiognomy (Classical tradition)**
+
+**Chinese Morphopsychology (面相)**
+
+**Overall Personality Sketch**
+3 to 5 sentences. Use **bold** for the key personality traits.`;
+
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-6',
+        max_tokens: 3000,
+        temperature: 0,
+        system: SYSTEM,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: imageMediaType, data: imageBase64 } },
+            { type: 'text', text: 'Analyze the personality of the person in this photo using your knowledge of morphopsychology, physiognomy and Chinese morphopsychology. Be attentive to potential changes in the angle caused by the camera position.' }
+          ]
+        }]
+      })
+    });
+    const data = await r.json();
+    if (data.error) throw new Error(data.error.message);
+    const text = data.content.map(b => b.text || '').join('').trim();
+    displayResult(text);
+  } catch(e) {
+    showError('Error: ' + e.message);
+  }
+
+  document.getElementById('hint-box').innerHTML = '';
+  btn.disabled = false;
+  btn.innerHTML = 'Read this face';
+}
+
+function displayResult(text) {
+  const marker = text.search(/\*{0,2}Overall Personality Sketch\*{0,2}/i);
+  let sketch = marker !== -1 ? text.slice(marker).replace(/^\*{0,2}Overall Personality Sketch\*{0,2}\s*/i, '').trim() : text.trim();
+  sketch = sketch.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  const paras = sketch.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+  const html = paras.map(p => '<p>' + p + '</p>').join('');
+  document.getElementById('result-box').innerHTML =
+    '<div class="result-card">' +
+    '<div class="result-eyebrow">Overall Personality Sketch</div>' +
+    '<div class="result-text">' + html + '</div>' +
+    '</div>' +
+    '<div class="disclaimer">If you want a deep analysis, contact a professional face reader.<br>' +
+    'Search for <a href="https://www.google.com/search?q=Moises+Acedo+Codina+face+reader" target="_blank">Moises Acedo Codina</a> — in-depth analyses from €19.</div>';
+}
+
+function showError(msg) { document.getElementById('error-box').innerHTML = '<div class="error-msg">' + msg + '</div>'; }
+function clearError() { document.getElementById('error-box').innerHTML = ''; }
+</script>
+</body>
+</html>
