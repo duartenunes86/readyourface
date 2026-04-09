@@ -1,0 +1,5 @@
+flask
+authlib
+stripe
+bcrypt
+requests
