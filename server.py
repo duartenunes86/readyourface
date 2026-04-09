@@ -7,8 +7,10 @@ import stripe
 import bcrypt
 
 ROOT = Path(__file__).parent
-# On Render, use /data for persistent storage; fall back to local for dev
+# Use RENDER_DATA_DIR if set and exists, otherwise use project dir
 _data_dir = Path(os.environ.get("RENDER_DATA_DIR", str(ROOT)))
+if not _data_dir.exists():
+    _data_dir = ROOT
 DB = _data_dir / "users.db"
 
 def load_env():
