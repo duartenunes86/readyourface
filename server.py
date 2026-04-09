@@ -7,7 +7,9 @@ import stripe
 import bcrypt
 
 ROOT = Path(__file__).parent
-DB   = ROOT / "users.db"
+# On Render, use /data for persistent storage; fall back to local for dev
+_data_dir = Path(os.environ.get("RENDER_DATA_DIR", str(ROOT)))
+DB = _data_dir / "users.db"
 
 def load_env():
     keys = {}
@@ -261,5 +263,6 @@ def stripe_webhook():
     return "", 200
 
 if __name__ == "__main__":
-    print("Open http://localhost:8787/")
-    app.run(host="127.0.0.1", port=8787, debug=False)
+    port = int(os.environ.get("PORT", 8787))
+    print(f"Open http://localhost:{port}/")
+    app.run(host="0.0.0.0", port=port, debug=False)
