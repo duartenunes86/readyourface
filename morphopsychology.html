@@ -3,128 +3,849 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Readyourface.net</title>
+<title>Readyourface.net — What Does Your Face Reveal?</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'DM Sans', sans-serif; background: #f9f7f4; color: #1a1a1a; min-height: 100vh; padding: 2.5rem 1rem 4rem; }
-.app { max-width: 660px; margin: 0 auto; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Header */
-.header { text-align: center; margin-bottom: 2rem; }
-.header h1 { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 400; letter-spacing: 0.3px; }
-.header p { font-size: 13px; color: #999; font-style: italic; margin-top: 4px; }
+:root {
+  --gold: #c9a84c;
+  --gold-light: #e8c96a;
+  --gold-dim: rgba(201,168,76,0.15);
+  --bg: #080810;
+  --bg2: #0e0e1a;
+  --bg3: #13131f;
+  --text: #f0ebe0;
+  --text-dim: rgba(240,235,224,0.55);
+  --border: rgba(201,168,76,0.2);
+}
 
-/* User bar */
-.user-bar { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-bottom: 1.25rem; font-size: 13px; }
-.user-bar .credits-badge { background: #eeedfe; color: #3c3489; padding: 4px 12px; border-radius: 20px; font-weight: 500; font-size: 12px; }
-.user-bar .user-name { color: #555; }
-.user-bar a { color: #aaa; font-size: 12px; cursor: pointer; text-decoration: underline; }
+html { scroll-behavior: smooth; }
 
-/* Drop zone */
-.drop-zone { border: 1.5px dashed #ccc; border-radius: 14px; padding: 2.5rem; text-align: center; cursor: pointer; background: #fff; margin-bottom: 1rem; transition: background 0.2s; }
-.drop-zone:hover { background: #f5f3f0; }
-.drop-zone.has-image { padding: 0; border-style: solid; overflow: hidden; }
-.drop-zone img { width: 100%; max-height: 320px; object-fit: cover; display: block; border-radius: 13px; }
-.drop-icon { font-size: 28px; color: #ccc; margin-bottom: 8px; }
-.drop-zone .hint { font-size: 14px; color: #888; margin-bottom: 4px; }
-.drop-zone .hint2 { font-size: 12px; color: #bbb; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-/* Buttons */
-.btn { width: 100%; padding: 13px; background: #1a1a1a; color: #fff; border: none; border-radius: 10px; font-family: 'Playfair Display', serif; font-size: 16px; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.15s; margin-bottom: 2rem; }
-.btn:hover { opacity: 0.85; }
-.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+/* ── Canvas background ── */
+#bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.45;
+}
 
-/* Messages */
-.error-msg { background: #fff0f0; color: #a32d2d; padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-bottom: 1.25rem; border: 1px solid #ffd0d0; }
-.running-hint { text-align: center; color: #aaa; font-size: 13px; margin-bottom: 1.5rem; font-style: italic; }
+/* ── Hero ── */
+.hero {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6rem 1.5rem 4rem;
+  text-align: center;
+}
 
-/* Result */
-.result-card { background: #fff; border: 1px solid #e0ddd8; border-radius: 16px; padding: 2.5rem 2.5rem 2rem; }
-.result-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: #bbb; margin-bottom: 1.25rem; font-family: 'DM Sans', sans-serif; }
-.result-text { font-family: 'Playfair Display', serif; font-size: 17px; line-height: 1.85; color: #1a1a1a; }
-.result-text p + p { margin-top: 1.1em; }
-.result-text strong, .result-text b { font-weight: 500; }
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -200px; left: 50%;
+  transform: translateX(-50%);
+  width: 700px; height: 700px;
+  background: radial-gradient(ellipse, rgba(201,168,76,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
 
-/* Disclaimer */
-.disclaimer { margin-top: 1.25rem; font-size: 15px; color: #888; text-align: center; line-height: 1.8; }
-.disclaimer a { color: #999; text-decoration: underline; }
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1.5rem;
+  opacity: 0;
+  animation: fadeUp 1s 0.2s forwards;
+}
 
-/* Spinner */
-.spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 8px; }
+.hero-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(52px, 9vw, 96px);
+  font-weight: 300;
+  line-height: 1.05;
+  letter-spacing: -1px;
+  color: var(--text);
+  margin-bottom: 1rem;
+  opacity: 0;
+  animation: fadeUp 1s 0.4s forwards;
+}
+
+.hero-title em {
+  font-style: italic;
+  color: var(--gold);
+}
+
+.hero-subtitle {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(18px, 3vw, 24px);
+  font-weight: 300;
+  font-style: italic;
+  color: var(--text-dim);
+  max-width: 560px;
+  line-height: 1.7;
+  margin-bottom: 3rem;
+  opacity: 0;
+  animation: fadeUp 1s 0.6s forwards;
+}
+
+/* ── Three pillars ── */
+.pillars {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 4rem;
+  opacity: 0;
+  animation: fadeUp 1s 0.8s forwards;
+}
+
+.pillar {
+  padding: 6px 16px;
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+.pillar:first-child { border-radius: 20px 2px 2px 20px; }
+.pillar:last-child { border-radius: 2px 20px 20px 2px; }
+
+/* ── Upload area ── */
+.upload-section {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  opacity: 0;
+  animation: fadeUp 1s 1s forwards;
+}
+
+.drop-zone {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3.5rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  background: var(--bg2);
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.drop-zone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.06) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.drop-zone:hover::before { opacity: 1; }
+.drop-zone:hover { border-color: rgba(201,168,76,0.5); }
+
+.drop-zone.has-image { padding: 0; }
+.drop-zone.has-image img { width: 100%; max-height: 360px; object-fit: cover; display: block; border-radius: 19px; }
+
+.drop-icon {
+  width: 56px; height: 56px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 1.25rem;
+  font-size: 22px;
+  color: var(--gold);
+  transition: all 0.3s;
+}
+
+.drop-zone:hover .drop-icon {
+  border-color: var(--gold);
+  background: var(--gold-dim);
+  transform: translateY(-2px);
+}
+
+.drop-hint {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.drop-hint2 {
+  font-size: 12px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
+/* ── CTA Button ── */
+.btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #c9a84c, #8b6914);
+  color: #0a0a0f;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  margin-bottom: 1rem;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  transition: left 0.5s;
+}
+
+.btn:hover::before { left: 100%; }
+.btn:hover { transform: translateY(-1px); box-shadow: 0 8px 30px rgba(201,168,76,0.3); }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn:disabled::before { display: none; }
+
+/* ── Features section ── */
+.features {
+  position: relative;
+  z-index: 1;
+  padding: 6rem 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.features-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 300;
+  text-align: center;
+  margin-bottom: 0.75rem;
+  color: var(--text);
+}
+
+.features-sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-style: italic;
+  color: var(--text-dim);
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.feature-card {
+  background: var(--bg2);
+  padding: 2.5rem 2rem;
+  transition: background 0.3s;
+}
+
+.feature-card:hover { background: var(--bg3); }
+
+.feature-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 48px;
+  font-weight: 300;
+  color: var(--gold);
+  opacity: 0.4;
+  line-height: 1;
+  margin-bottom: 1rem;
+}
+
+.feature-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.feature-desc {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-dim);
+}
+
+/* ── Quote ── */
+.quote-section {
+  position: relative;
+  z-index: 1;
+  padding: 5rem 1.5rem;
+  text-align: center;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.quote-line {
+  width: 1px;
+  height: 60px;
+  background: linear-gradient(to bottom, transparent, var(--gold), transparent);
+  margin: 0 auto 2.5rem;
+}
+
+.quote-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(22px, 4vw, 36px);
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.6;
+  color: var(--text);
+  margin-bottom: 1.5rem;
+}
+
+.quote-attr {
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+/* ── How it works ── */
+.how {
+  position: relative;
+  z-index: 1;
+  padding: 4rem 1.5rem 8rem;
+  max-width: 700px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.how-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 300;
+  margin-bottom: 3rem;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding: 1.75rem 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.step:last-child { border-bottom: none; }
+
+.step-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 36px;
+  font-weight: 300;
+  color: var(--gold);
+  opacity: 0.5;
+  min-width: 40px;
+  line-height: 1;
+  padding-top: 4px;
+}
+
+.step-text h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.step-text p {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+/* ── Messages ── */
+.error-msg {
+  background: rgba(163,45,45,0.1);
+  color: #e87070;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(163,45,45,0.3);
+}
+
+.running-hint {
+  text-align: center;
+  color: var(--gold);
+  font-size: 13px;
+  margin-bottom: 1.5rem;
+  font-style: italic;
+  letter-spacing: 0.3px;
+}
+
+/* ── Result ── */
+.result-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2.5rem;
+  margin-top: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.result-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.result-eyebrow {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: var(--gold);
+  margin-bottom: 1.5rem;
+}
+
+.result-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  line-height: 1.9;
+  color: var(--text);
+}
+
+.result-text p + p { margin-top: 1em; }
+.result-text strong { color: var(--gold-light); font-weight: 500; }
+
+.disclaimer {
+  margin-top: 1.5rem;
+  font-size: 14px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.9;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg2);
+}
+
+.disclaimer a { color: var(--gold); text-decoration: none; border-bottom: 1px solid rgba(201,168,76,0.3); }
+.disclaimer a:hover { border-bottom-color: var(--gold); }
+
+/* ── Spinner ── */
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid rgba(10,10,15,0.3);
+  border-top-color: #0a0a0f;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Modal overlay */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; }
-.modal-overlay.open { display: flex; }
-.modal { background: #fff; border-radius: 18px; padding: 2rem; width: 100%; max-width: 420px; margin: 1rem; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
-.modal h2 { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 400; margin-bottom: 6px; }
-.modal .sub { font-size: 13px; color: #888; margin-bottom: 1.5rem; }
-.modal-tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
-.modal-tab { flex: 1; padding: 9px; font-size: 13px; font-family: 'DM Sans', sans-serif; border: none; background: #fafafa; cursor: pointer; transition: background 0.15s; }
-.modal-tab.active { background: #1a1a1a; color: #fff; }
-.modal-input { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; margin-bottom: 10px; background: #fafafa; }
-.modal-input:focus { outline: none; border-color: #999; }
-.modal-btn { width: 100%; padding: 11px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-family: 'DM Sans', sans-serif; cursor: pointer; margin-bottom: 10px; transition: opacity 0.15s; }
-.modal-btn:hover { opacity: 0.85; }
-.modal-btn.google { background: #fff; color: #333; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.modal-btn.google:hover { background: #f5f5f5; }
-.modal-divider { text-align: center; font-size: 12px; color: #bbb; margin: 10px 0; }
-.modal-error { color: #a32d2d; font-size: 12px; margin-bottom: 8px; }
+/* ── User bar ── */
+.user-bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 50;
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 24px;
+  background: rgba(8,8,16,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
 
-/* Payment options */
-.pack-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.25rem; }
-.pack-card { border: 1.5px solid #e0e0e0; border-radius: 12px; padding: 1.25rem 1rem; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
-.pack-card:hover { border-color: #1a1a1a; background: #fafaf9; }
-.pack-card .pack-price { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 500; }
-.pack-card .pack-label { font-size: 12px; color: #888; margin-top: 4px; }
-.pack-card .pack-unit { font-size: 11px; color: #bbb; margin-top: 2px; }
-.pack-card.best { border-color: #3c3489; background: #f5f4ff; }
-.pack-card.best .pack-label { color: #3c3489; }
+.user-bar.visible { display: flex; }
+.credits-badge {
+  background: var(--gold-dim);
+  color: var(--gold);
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  border: 1px solid rgba(201,168,76,0.25);
+}
+
+.user-name { color: var(--text-dim); }
+.user-bar a { color: var(--text-dim); font-size: 12px; cursor: pointer; text-decoration: none; opacity: 0.6; transition: opacity 0.2s; }
+.user-bar a:hover { opacity: 1; }
+
+/* ── Modals ── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2.25rem;
+  width: 100%;
+  max-width: 420px;
+  margin: 1rem;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+  position: relative;
+  overflow: hidden;
+}
+
+.modal::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.modal h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px;
+  font-weight: 400;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.modal .sub {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 1.75rem;
+}
+
+.modal-tabs {
+  display: flex;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.modal-tab {
+  flex: 1;
+  padding: 10px;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-tab.active { background: var(--gold); color: #0a0a0f; font-weight: 500; }
+
+.modal-input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  margin-bottom: 10px;
+  background: var(--bg3);
+  color: var(--text);
+  transition: border-color 0.2s;
+}
+
+.modal-input:focus { outline: none; border-color: rgba(201,168,76,0.5); }
+.modal-input::placeholder { color: rgba(240,235,224,0.25); }
+
+.modal-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--gold);
+  color: #0a0a0f;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+}
+
+.modal-btn:hover { background: var(--gold-light); }
+
+.modal-btn.google {
+  background: var(--bg3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.modal-btn.google:hover { border-color: rgba(201,168,76,0.4); background: #1a1a28; }
+
+.modal-divider { text-align: center; font-size: 12px; color: var(--text-dim); margin: 12px 0; }
+.modal-error { color: #e87070; font-size: 12px; margin-bottom: 8px; }
+
+/* ── Payment cards ── */
+.pack-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.25rem; }
+
+.pack-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  background: var(--bg3);
+  transition: all 0.2s;
+}
+
+.pack-card:hover { border-color: var(--gold); }
+
+.pack-card.best {
+  border-color: rgba(201,168,76,0.4);
+  background: rgba(201,168,76,0.06);
+}
+
+.pack-price {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 36px;
+  font-weight: 400;
+  color: var(--gold);
+}
+
+.pack-label { font-size: 13px; color: var(--text); margin-top: 4px; }
+.pack-unit { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+.pack-badge {
+  display: inline-block;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  background: var(--gold);
+  color: #0a0a0f;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-top: 6px;
+}
+
+/* ── Animations ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Divider ── */
+.divider {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  opacity: 0.3;
+}
+
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--gold);
+}
+
+.divider-diamond {
+  width: 6px; height: 6px;
+  background: var(--gold);
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+  .pillars { flex-direction: column; align-items: center; gap: 6px; }
+  .pillar { border-radius: 20px !important; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .modal { padding: 1.75rem; }
+}
 </style>
 </head>
 <body>
-<div class="app">
-  <div class="header">
-    <h1>Readyourface.net</h1>
-    <p>An app that reads your personality by your face</p>
-  </div>
 
-  <div class="user-bar" id="user-bar" style="display:none">
-    <span class="user-name" id="user-name"></span>
-    <span class="credits-badge" id="credits-badge"></span>
-    <a onclick="logout()">Log out</a>
-  </div>
+<canvas id="bg-canvas"></canvas>
 
-  <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
-    <div class="drop-icon">↑</div>
-    <div class="hint">Upload a portrait photo</div>
-    <div class="hint2">JPG, PNG or WEBP · front-facing, good light</div>
-  </div>
-  <input type="file" id="file-input" accept="image/*" style="display:none">
-
-  <button class="btn" id="btn" disabled onclick="onAnalyzeClick()">Read this face</button>
-
-  <div id="error-box"></div>
-  <div id="hint-box"></div>
-  <div id="result-box"></div>
+<!-- User bar -->
+<div class="user-bar" id="user-bar">
+  <span class="user-name" id="user-name"></span>
+  <span class="credits-badge" id="credits-badge"></span>
+  <a onclick="logout()">Sign out</a>
 </div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="eyebrow">Ancient science · Modern AI</div>
+
+  <h1 class="hero-title">
+    Your face reveals<br>
+    <em>everything.</em>
+  </h1>
+
+  <p class="hero-subtitle">
+    For millennia, scholars have read faces to understand character, destiny, and soul.
+    Now, the ancient art meets the most advanced AI in the world.
+  </p>
+
+  <div class="pillars">
+    <div class="pillar">Western Morphopsychology</div>
+    <div class="pillar">Physiognomy</div>
+    <div class="pillar">Chinese Face Reading</div>
+  </div>
+
+  <!-- Upload -->
+  <div class="upload-section">
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="drop-icon">↑</div>
+      <div class="drop-hint">Upload your portrait</div>
+      <div class="drop-hint2">JPG, PNG or WEBP &nbsp;·&nbsp; front-facing &nbsp;·&nbsp; good light</div>
+    </div>
+    <input type="file" id="file-input" accept="image/*" style="display:none">
+
+    <div id="error-box"></div>
+    <div id="hint-box"></div>
+
+    <button class="btn" id="btn" disabled onclick="onAnalyzeClick()">Read this face</button>
+
+    <div id="result-box"></div>
+  </div>
+</section>
+
+<!-- Divider -->
+<div class="divider"><div class="divider-diamond"></div></div>
+
+<!-- Features -->
+<section class="features">
+  <h2 class="features-title">Three ancient traditions.<br>One profound reading.</h2>
+  <p class="features-sub">Each framework sees what the others miss.</p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-num">I</div>
+      <div class="feature-name">Western Morphopsychology</div>
+      <div class="feature-desc">Developed by Dr. Louis Corman, this science reads the architecture of the face — its zones, proportions, and forms — to reveal the deep structures of personality and how one relates to the world.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-num">II</div>
+      <div class="feature-name">Classical Physiognomy</div>
+      <div class="feature-desc">From Aristotle to Lavater, the Western tradition of physiognomy maps facial features to character traits — the forehead of thought, the eyes of emotion, the jaw of will.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-num">III</div>
+      <div class="feature-name">Chinese Face Reading</div>
+      <div class="feature-desc">The ancient art of 面相 (Miànxiàng) reads fortune, health, and destiny in the contours of the face. Used by emperors and healers for over 3,000 years.</div>
+    </div>
+  </div>
+</section>
+
+<!-- Quote -->
+<div class="divider"><div class="divider-diamond"></div></div>
+
+<section class="quote-section">
+  <div class="quote-line"></div>
+  <p class="quote-text">"The face is the mirror of the mind, and eyes without speaking confess the secrets of the heart."</p>
+  <div class="quote-attr">— St. Jerome, 4th century</div>
+</section>
+
+<div class="divider"><div class="divider-diamond"></div></div>
+
+<!-- How it works -->
+<section class="how">
+  <h2 class="how-title">How it works</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">
+        <h3>Upload a portrait</h3>
+        <p>A clear, front-facing photo in good light. The better the photo, the deeper the reading.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">
+        <h3>Claude Opus analyses three traditions</h3>
+        <p>The most advanced AI in the world applies Western morphopsychology, classical physiognomy, and Chinese face reading simultaneously.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">
+        <h3>Receive your personality sketch</h3>
+        <p>A synthesis of all three readings — the key traits, contradictions, and patterns that define who you are.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-text">
+        <h3>Go deeper with a human expert</h3>
+        <p>AI sees the patterns. A master reader sees the soul. For a full analysis, consult a professional face reader.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- Login / Register modal -->
 <div class="modal-overlay" id="auth-modal">
   <div class="modal">
     <h2>Sign in to continue</h2>
-    <p class="sub">You need an account to use your credits.</p>
+    <p class="sub">You need an account to read a face.</p>
     <div class="modal-tabs">
-      <button class="modal-tab active" id="tab-login" onclick="switchTab('login')">Log in</button>
+      <button class="modal-tab active" id="tab-login" onclick="switchTab('login')">Sign in</button>
       <button class="modal-tab" id="tab-register" onclick="switchTab('register')">Register</button>
     </div>
     <div id="auth-error" class="modal-error" style="display:none"></div>
     <div id="register-name-row" style="display:none">
       <input class="modal-input" id="auth-name" type="text" placeholder="Your name">
     </div>
-    <input class="modal-input" id="auth-email" type="email" placeholder="Email">
+    <input class="modal-input" id="auth-email" type="email" placeholder="Email address">
     <input class="modal-input" id="auth-password" type="password" placeholder="Password">
     <button class="modal-btn" onclick="submitAuth()">Continue</button>
     <div class="modal-divider">or</div>
@@ -132,42 +853,107 @@ body { font-family: 'DM Sans', sans-serif; background: #f9f7f4; color: #1a1a1a; 
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Continue with Google
     </button>
-    <div style="text-align:center;margin-top:12px"><a style="font-size:12px;color:#bbb;cursor:pointer" onclick="closeModal('auth-modal')">Cancel</a></div>
+    <div style="text-align:center;margin-top:14px">
+      <a style="font-size:12px;color:var(--text-dim);cursor:pointer;opacity:0.6" onclick="closeModal('auth-modal')">Cancel</a>
+    </div>
   </div>
 </div>
 
 <!-- Buy credits modal -->
 <div class="modal-overlay" id="pay-modal">
   <div class="modal">
-    <h2>Get credits</h2>
-    <p class="sub">Each credit = one face reading.</p>
+    <h2>Choose your reading</h2>
+    <p class="sub">One credit · One face · One revelation.</p>
     <div class="pack-grid">
       <div class="pack-card" onclick="buyPack('single')">
         <div class="pack-price">€5</div>
-        <div class="pack-label">1 analysis</div>
-        <div class="pack-unit">€5 per reading</div>
+        <div class="pack-label">Single reading</div>
+        <div class="pack-unit">€5 per analysis</div>
       </div>
       <div class="pack-card best" onclick="buyPack('pack')">
         <div class="pack-price">€15</div>
-        <div class="pack-label">10 analyses</div>
-        <div class="pack-unit">€1.50 per reading</div>
+        <div class="pack-label">10 readings</div>
+        <div class="pack-unit">€1.50 per analysis</div>
+        <div class="pack-badge">Best value</div>
       </div>
     </div>
     <div id="pay-error" class="modal-error" style="display:none"></div>
-    <div style="text-align:center"><a style="font-size:12px;color:#bbb;cursor:pointer" onclick="closeModal('pay-modal')">Cancel</a></div>
+    <div style="text-align:center">
+      <a style="font-size:12px;color:var(--text-dim);cursor:pointer;opacity:0.6" onclick="closeModal('pay-modal')">Cancel</a>
+    </div>
   </div>
 </div>
 
 <script>
+// ── Particle canvas ────────────────────────────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function init() {
+    particles = [];
+    for (let i = 0; i < 60; i++) {
+      particles.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: Math.random() * 1.2 + 0.3,
+        vx: (Math.random() - 0.5) * 0.15,
+        vy: (Math.random() - 0.5) * 0.15,
+        alpha: Math.random() * 0.5 + 0.1
+      });
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    // Draw connections
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 160) {
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(201,168,76,${0.04 * (1 - dist/160)})`;
+          ctx.lineWidth = 0.5;
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    // Draw dots
+    particles.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(201,168,76,${p.alpha})`;
+      ctx.fill();
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0 || p.x > W) p.vx *= -1;
+      if (p.y < 0 || p.y > H) p.vy *= -1;
+    });
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => { resize(); init(); });
+  resize(); init(); draw();
+})();
+
+// ── App logic ──────────────────────────────────────────────────────────────────
 let ANTHROPIC_KEY = "";
 let currentUser = null;
 let imageBase64 = null, imageMediaType = null;
 
-// Load config on start
 fetch('/config').then(r => r.json()).then(d => {
   ANTHROPIC_KEY = d.key || "";
   if (d.user) setUser(d.user);
-  // Restore image if user was redirected away (Google login or Stripe payment)
   const pending = sessionStorage.getItem('pendingImage');
   if (pending) {
     sessionStorage.removeItem('pendingImage');
@@ -179,7 +965,6 @@ fetch('/config').then(r => r.json()).then(d => {
       dropZone.classList.add('has-image');
       dropZone.innerHTML = '<img src="' + dataUrl + '" alt="Portrait">';
       btn.disabled = false;
-      // If logged in and has credits, auto-analyze
       if (d.user && d.user.credits > 0) onAnalyzeClick();
     } catch(e) {}
   }
@@ -189,9 +974,9 @@ const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 const btn = document.getElementById('btn');
 
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.opacity = '0.75'; });
-dropZone.addEventListener('dragleave', () => { dropZone.style.opacity = '1'; });
-dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.style.opacity = '1'; if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = 'var(--gold)'; });
+dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = ''; });
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.style.borderColor = ''; if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
 fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
 
 function loadFile(file) {
@@ -214,16 +999,13 @@ function loadFile(file) {
 function setUser(user) {
   currentUser = user;
   const bar = document.getElementById('user-bar');
-  bar.style.display = 'flex';
+  bar.classList.add('visible');
   document.getElementById('user-name').textContent = user.name || user.email;
   document.getElementById('credits-badge').textContent = user.credits + ' credit' + (user.credits !== 1 ? 's' : '');
 }
 
-function logout() {
-  window.location.href = '/auth/logout';
-}
+function logout() { window.location.href = '/auth/logout'; }
 
-// ── Modal helpers ──────────────────────────────────────────────────────────────
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
@@ -254,31 +1036,20 @@ async function submitAuth() {
   if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
   setUser(d);
   closeModal('auth-modal');
-  // If they were trying to analyze, proceed
   if (imageBase64) onAnalyzeClick();
 }
 
-// ── Analyze flow ───────────────────────────────────────────────────────────────
 async function onAnalyzeClick() {
   if (!imageBase64) return showError('Please upload a photo first.');
   clearError();
-
-  // Step 1: must be logged in
   if (!currentUser) { openModal('auth-modal'); return; }
-
-  // Step 2: must have credits
   if (currentUser.credits < 1) { openModal('pay-modal'); return; }
-
-  // Step 3: deduct credit server-side then run analysis
   const cr = await fetch('/use-credit', { method: 'POST' });
   const cd = await cr.json();
   if (cd.error === 'not_logged_in') { openModal('auth-modal'); return; }
   if (cd.error === 'no_credits')    { openModal('pay-modal');  return; }
-
-  // Update badge
   currentUser.credits = cd.credits;
   document.getElementById('credits-badge').textContent = cd.credits + ' credit' + (cd.credits !== 1 ? 's' : '');
-
   await runAnalysis();
 }
 
@@ -288,7 +1059,6 @@ async function buyPack(pack) {
   try {
     const r = await fetch('/create-checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pack }), credentials: 'include' });
     const d = await r.json();
-    console.log('buyPack response:', d);
     if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
     if (d.url) {
       if (imageBase64) sessionStorage.setItem('pendingImage', JSON.stringify({ data: imageBase64, type: imageMediaType }));
@@ -303,7 +1073,7 @@ async function buyPack(pack) {
 async function runAnalysis() {
   if (!ANTHROPIC_KEY) return showError('API key not configured.');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Reading...';
+  btn.innerHTML = '<span class="spinner"></span>Reading the face…';
   document.getElementById('result-box').innerHTML = '';
   document.getElementById('hint-box').innerHTML = '<div class="running-hint">Claude Opus is reading the face — this takes about 20–30 seconds…</div>';
 
