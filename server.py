@@ -151,7 +151,8 @@ def logout():
 # ── Auth: Google OAuth ─────────────────────────────────────────────────────────
 @app.route("/auth/google")
 def auth_google():
-    redirect_uri = request.host_url.rstrip("/") + "/auth/google/callback"
+    base = request.host_url.rstrip("/").replace("http://", "https://")
+    redirect_uri = base + "/auth/google/callback"
     return google.authorize_redirect(redirect_uri)
 
 @app.route("/auth/google/callback")
