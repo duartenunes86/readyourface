@@ -1075,7 +1075,7 @@ async function runAnalysis() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Reading the face…';
   document.getElementById('result-box').innerHTML = '';
-  document.getElementById('hint-box').innerHTML = '<div class="running-hint">Reading the face — this takes about 20–30 seconds…</div>';
+  document.getElementById('hint-box').innerHTML = '<div class="running-hint">Reading the face — this takes about 60–90 seconds…</div>';
 
   const SYSTEM = `You are an expert in morphopsychology, physiognomy, and Chinese face reading. Analyze this portrait using exactly these four sections:
 
@@ -1099,8 +1099,8 @@ async function runAnalysis() {
       },
       body: JSON.stringify({
         model: 'claude-opus-4-6',
-        max_tokens: 3000,
-        temperature: 0,
+        max_tokens: 16000,
+        thinking: { type: 'enabled', budget_tokens: 10000 },
         system: SYSTEM,
         messages: [{
           role: 'user',
@@ -1113,7 +1113,7 @@ async function runAnalysis() {
     });
     const data = await r.json();
     if (data.error) throw new Error(data.error.message);
-    const text = data.content.map(b => b.text || '').join('').trim();
+    const text = data.content.filter(b => b.type === 'text').map(b => b.text || '').join('').trim();
     displayResult(text);
   } catch(e) {
     showError('Error: ' + e.message);
