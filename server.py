@@ -5,6 +5,7 @@ from flask import Flask, request, session, redirect, jsonify, send_from_director
 from authlib.integrations.flask_client import OAuth
 import stripe
 import bcrypt
+import requests as http_requests
 
 ROOT = Path(__file__).parent
 # Use RENDER_DATA_DIR if set and exists, otherwise use project dir
@@ -266,6 +267,145 @@ def stripe_webhook():
         if uid and pack in PRICES and cs.get("payment_status") == "paid":
             add_credits(uid, PRICES[pack]["credits"])
     return "", 200
+
+# ── Analyze with web search ────────────────────────────────────────────────────
+SYSTEM_PROMPT = """You are an expert in morphopsychology, physiognomy, and Chinese face reading. Analyze this portrait using exactly these four sections:
+
+**Western Morphopsychology (Louis Corman)**
+
+**Physiognomy (Classical tradition)**
+
+**Chinese Morphopsychology (面相)**
+
+**Overall Personality Sketch**
+3 to 5 sentences. Use **bold** for the key personality traits."""
+
+def brave_search(query):
+    key = ENV.get("BRAVE_API_KEY", "")
+    if not key:
+        return []
+    try:
+        r = http_requests.get(
+            "https://api.search.brave.com/res/v1/web/search",
+            headers={"Accept": "application/json", "X-Subscription-Token": key},
+            params={"q": query, "count": 3, "text_decorations": False},
+            timeout=10
+        )
+        results = r.json().get("web", {}).get("results", [])
+        return [{"title": x.get("title",""), "url": x.get("url",""), "description": x.get("description","")} for x in results]
+    except Exception:
+        return []
+
+def fetch_page(url):
+    try:
+        r = http_requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+        text = r.text
+        # Strip HTML tags roughly
+        import re
+        text = re.sub(r'<[^>]+>', ' ', text)
+        text = re.sub(r'\s+', ' ', text).strip()
+        return text[:4000]
+    except Exception:
+        return ""
+
+@app.route("/analyze", methods=["POST"])
+def analyze():
+    user_id = session.get("user_id")
+    if not user_id:
+        return jsonify({"error": "not_logged_in"}), 401
+
+    data = request.json
+    image_b64   = data.get("image")
+    media_type  = data.get("media_type", "image/jpeg")
+
+    if not image_b64:
+        return jsonify({"error": "no image"}), 400
+
+    anthropic_key = ENV.get("ANTHROPIC_API_KEY", "")
+    if not anthropic_key:
+        return jsonify({"error": "API key not configured"}), 500
+
+    tools = [{
+        "name": "web_search",
+        "description": "Search the web for morphopsychology, physiognomy, or Chinese face reading reference material to inform the analysis.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Search query"}
+            },
+            "required": ["query"]
+        }
+    }]
+
+    messages = [{
+        "role": "user",
+        "content": [
+            {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_b64}},
+            {"type": "text", "text": "Analyze the personality of the person in this photo using your knowledge of morphopsychology, physiognomy and Chinese morphopsychology. Be attentive to potential changes in the angle caused by the camera position."}
+        ]
+    }]
+
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": anthropic_key,
+        "anthropic-version": "2023-06-01"
+    }
+
+    # Agentic loop — let Claude search as needed
+    for _ in range(8):  # max 8 iterations
+        payload = {
+            "model": "claude-opus-4-6",
+            "max_tokens": 4000,
+            "temperature": 0,
+            "system": SYSTEM_PROMPT,
+            "tools": tools,
+            "messages": messages
+        }
+        r = http_requests.post("https://api.anthropic.com/v1/messages", headers=headers, json=payload, timeout=120)
+        resp = r.json()
+
+        if resp.get("error"):
+            return jsonify({"error": resp["error"].get("message", "API error")}), 500
+
+        stop_reason = resp.get("stop_reason")
+        content     = resp.get("content", [])
+
+        # Add assistant turn
+        messages.append({"role": "assistant", "content": content})
+
+        if stop_reason == "end_turn":
+            # Extract final text
+            text = "".join(b.get("text","") for b in content if b.get("type") == "text").strip()
+            return jsonify({"result": text})
+
+        if stop_reason == "tool_use":
+            # Process tool calls
+            tool_results = []
+            for block in content:
+                if block.get("type") == "tool_use" and block.get("name") == "web_search":
+                    query = block["input"].get("query", "")
+                    search_results = brave_search(query)
+                    # Fetch top result page content
+                    context = ""
+                    if search_results:
+                        context = fetch_page(search_results[0]["url"])
+                    result_text = "\n".join([
+                        f"Title: {x['title']}\nURL: {x['url']}\nSummary: {x['description']}"
+                        for x in search_results
+                    ])
+                    if context:
+                        result_text += f"\n\nPage content:\n{context}"
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block["id"],
+                        "content": result_text or "No results found."
+                    })
+            messages.append({"role": "user", "content": tool_results})
+        else:
+            break
+
+    return jsonify({"error": "Analysis failed"}), 500
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8787))
