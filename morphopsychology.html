@@ -1071,20 +1071,50 @@ async function buyPack(pack) {
 }
 
 async function runAnalysis() {
+  if (!ANTHROPIC_KEY) return showError('API key not configured.');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Reading the face…';
   document.getElementById('result-box').innerHTML = '';
-  document.getElementById('hint-box').innerHTML = '<div class="running-hint">Analyzing — this may take a moment…</div>';
+  document.getElementById('hint-box').innerHTML = '<div class="running-hint">Reading the face — this takes about 20–30 seconds…</div>';
+
+  const SYSTEM = `You are an expert in morphopsychology, physiognomy, and Chinese face reading. Analyze this portrait using exactly these four sections:
+
+**Western Morphopsychology (Louis Corman)**
+
+**Physiognomy (Classical tradition)**
+
+**Chinese Morphopsychology (面相)**
+
+**Overall Personality Sketch**
+3 to 5 sentences. Use **bold** for the key personality traits.`;
 
   try {
-    const r = await fetch('/analyze', {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: imageBase64, media_type: imageMediaType })
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-6',
+        max_tokens: 3000,
+        temperature: 0,
+        system: SYSTEM,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: imageMediaType, data: imageBase64 } },
+            { type: 'text', text: 'Analyze the personality of the person in this photo using your knowledge of morphopsychology, physiognomy and Chinese morphopsychology. Be attentive to potential changes in the angle caused by the camera position.' }
+          ]
+        }]
+      })
     });
     const data = await r.json();
-    if (data.error) throw new Error(data.error);
-    displayResult(data.result);
+    if (data.error) throw new Error(data.error.message);
+    const text = data.content.map(b => b.text || '').join('').trim();
+    displayResult(text);
   } catch(e) {
     showError('Error: ' + e.message);
   }
