@@ -865,18 +865,24 @@ body {
     <h2>Choose your reading</h2>
     <p class="sub">One credit · One face · One revelation.</p>
     <div class="pack-grid">
-      <div class="pack-card" onclick="buyPack('single')">
-        <div class="pack-price">€5</div>
+      <div class="pack-card" id="card-single" onclick="selectPack('single')">
+        <div class="pack-price" id="price-single">£5</div>
         <div class="pack-label">Single reading</div>
-        <div class="pack-unit">€5 per analysis</div>
+        <div class="pack-unit">£5 per analysis</div>
       </div>
-      <div class="pack-card best" onclick="buyPack('pack')">
-        <div class="pack-price">€15</div>
+      <div class="pack-card best" id="card-pack" onclick="selectPack('pack')">
+        <div class="pack-price" id="price-pack">£15</div>
         <div class="pack-label">10 readings</div>
-        <div class="pack-unit">€1.50 per analysis</div>
+        <div class="pack-unit">£1.50 per analysis</div>
         <div class="pack-badge">Best value</div>
       </div>
     </div>
+    <div style="display:flex;gap:8px;margin-bottom:1rem">
+      <input id="discount-input" type="text" placeholder="Discount code" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;outline:none">
+      <button onclick="applyCode()" style="background:var(--gold-dim);border:1px solid var(--border);border-radius:8px;padding:10px 16px;color:var(--gold);font-size:13px;cursor:pointer;white-space:nowrap">Apply</button>
+    </div>
+    <div id="code-msg" style="font-size:13px;margin-bottom:0.75rem;min-height:18px"></div>
+    <button class="btn" id="pay-btn" onclick="proceedCheckout()" style="width:100%;margin-bottom:0.75rem" disabled>Select a pack</button>
     <div id="pay-error" class="modal-error" style="display:none"></div>
     <div style="text-align:center">
       <a style="font-size:12px;color:var(--text-dim);cursor:pointer;opacity:0.6" onclick="closeModal('pay-modal')">Cancel</a>
@@ -1006,7 +1012,19 @@ function setUser(user) {
 
 function logout() { window.location.href = '/auth/logout'; }
 
-function openModal(id) { document.getElementById(id).classList.add('open'); }
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  if (id === 'pay-modal') {
+    selectedPack = null; appliedCode = null;
+    document.getElementById('card-single').style.borderColor = '';
+    document.getElementById('card-pack').style.borderColor = '';
+    document.getElementById('discount-input').value = '';
+    document.getElementById('code-msg').textContent = '';
+    document.getElementById('pay-btn').disabled = true;
+    document.getElementById('pay-btn').textContent = 'Select a pack';
+    document.getElementById('pay-error').style.display = 'none';
+  }
+}
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 function switchTab(tab) {
@@ -1053,11 +1071,60 @@ async function onAnalyzeClick() {
   await runAnalysis();
 }
 
-async function buyPack(pack) {
+let selectedPack = null;
+let appliedCode = null;
+const PRICES_GBP = { single: { base: 5, label: '£5' }, pack: { base: 15, label: '£15' } };
+
+function selectPack(pack) {
+  selectedPack = pack;
+  document.getElementById('card-single').style.borderColor = pack === 'single' ? 'var(--gold)' : '';
+  document.getElementById('card-pack').style.borderColor   = pack === 'pack'   ? 'var(--gold)' : '';
+  const btn = document.getElementById('pay-btn');
+  btn.disabled = false;
+  updatePayBtn();
+}
+
+function updatePayBtn() {
+  if (!selectedPack) return;
+  const btn = document.getElementById('pay-btn');
+  const base = PRICES_GBP[selectedPack].base;
+  if (appliedCode) {
+    const discounted = (base * (100 - appliedCode.percent_off) / 100).toFixed(2);
+    btn.textContent = 'Pay £' + discounted;
+  } else {
+    btn.textContent = 'Pay ' + PRICES_GBP[selectedPack].label;
+  }
+}
+
+async function applyCode() {
+  const code = document.getElementById('discount-input').value.trim();
+  const msgEl = document.getElementById('code-msg');
+  if (!code) return;
+  try {
+    const r = await fetch('/validate-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+    const d = await r.json();
+    if (d.error) {
+      msgEl.style.color = '#e05'; msgEl.textContent = d.error;
+      appliedCode = null;
+    } else {
+      msgEl.style.color = 'var(--gold)'; msgEl.textContent = '✓ ' + d.percent_off + '% discount applied';
+      appliedCode = d;
+    }
+  } catch(e) {
+    msgEl.style.color = '#e05'; msgEl.textContent = 'Error validating code';
+    appliedCode = null;
+  }
+  updatePayBtn();
+}
+
+async function proceedCheckout() {
+  if (!selectedPack) return;
   const errEl = document.getElementById('pay-error');
   errEl.style.display = 'none';
+  const body = { pack: selectedPack };
+  if (appliedCode) body.discount_code = appliedCode.code;
   try {
-    const r = await fetch('/create-checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pack }), credentials: 'include' });
+    const r = await fetch('/create-checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'include' });
     const d = await r.json();
     if (d.error) { errEl.textContent = d.error; errEl.style.display = 'block'; return; }
     if (d.url) {

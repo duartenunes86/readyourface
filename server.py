@@ -71,6 +71,16 @@ def init_db():
                 created  DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS discount_codes (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                code        TEXT UNIQUE NOT NULL,
+                percent_off INTEGER NOT NULL,
+                max_uses    INTEGER DEFAULT NULL,
+                uses        INTEGER DEFAULT 0,
+                active      INTEGER DEFAULT 1
+            )
+        """)
         db.commit()
 
 init_db()
@@ -191,6 +201,27 @@ def use_credit():
 # ── Admin: give credits ────────────────────────────────────────────────────────
 ADMIN_KEY = ENV.get("ADMIN_KEY", "")
 
+@app.route("/admin/add-code", methods=["POST"])
+def admin_add_code():
+    if not ADMIN_KEY or request.headers.get("X-Admin-Key") != ADMIN_KEY:
+        return jsonify({"error": "unauthorized"}), 401
+    data = request.json
+    code       = (data.get("code") or "").upper().strip()
+    percent_off = int(data.get("percent_off", 0))
+    max_uses    = data.get("max_uses")  # None = unlimited
+    if not code or not (1 <= percent_off <= 100):
+        return jsonify({"error": "code and percent_off (1-100) required"}), 400
+    with get_db() as db:
+        try:
+            db.execute(
+                "INSERT INTO discount_codes (code, percent_off, max_uses) VALUES (?,?,?)",
+                (code, percent_off, max_uses)
+            )
+            db.commit()
+        except Exception:
+            return jsonify({"error": "Code already exists"}), 400
+    return jsonify({"ok": True, "code": code, "percent_off": percent_off, "max_uses": max_uses})
+
 @app.route("/admin/give-credits", methods=["POST"])
 def admin_give_credits():
     if not ADMIN_KEY or request.headers.get("X-Admin-Key") != ADMIN_KEY:
@@ -211,22 +242,62 @@ PRICES = {
     "pack":   {"amount": 1500, "credits": 10, "label": "10 analyses"},
 }
 
+def get_discount_code(code):
+    with get_db() as db:
+        return db.execute(
+            "SELECT * FROM discount_codes WHERE code=? AND active=1",
+            (code.upper().strip(),)
+        ).fetchone()
+
+def use_discount_code(code):
+    with get_db() as db:
+        db.execute(
+            "UPDATE discount_codes SET uses = uses + 1 WHERE code=?",
+            (code.upper().strip(),)
+        )
+        # Deactivate if max_uses reached
+        db.execute(
+            "UPDATE discount_codes SET active = 0 WHERE code=? AND max_uses IS NOT NULL AND uses >= max_uses",
+            (code.upper().strip(),)
+        )
+        db.commit()
+
+@app.route("/validate-code", methods=["POST"])
+def validate_code():
+    code = (request.json.get("code") or "").upper().strip()
+    if not code:
+        return jsonify({"error": "No code provided"}), 400
+    row = get_discount_code(code)
+    if not row:
+        return jsonify({"error": "Invalid or expired code"}), 404
+    if row["max_uses"] is not None and row["uses"] >= row["max_uses"]:
+        return jsonify({"error": "Code has reached its usage limit"}), 400
+    return jsonify({"ok": True, "percent_off": row["percent_off"], "code": code})
+
 @app.route("/create-checkout", methods=["POST"])
 def create_checkout():
     user_id = session.get("user_id")
     if not user_id:
         return jsonify({"error": "not_logged_in"}), 401
-    pack = request.json.get("pack", "single")
+    data = request.json
+    pack = data.get("pack", "single")
     if pack not in PRICES:
         return jsonify({"error": "invalid pack"}), 400
     p = PRICES[pack]
+    amount = p["amount"]
+    discount_code = (data.get("discount_code") or "").upper().strip()
+    if discount_code:
+        row = get_discount_code(discount_code)
+        if row and (row["max_uses"] is None or row["uses"] < row["max_uses"]):
+            amount = int(amount * (100 - row["percent_off"]) / 100)
+            use_discount_code(discount_code)
     base = request.host_url.rstrip("/")
     checkout = stripe.checkout.Session.create(
         payment_method_types=["card"],
         line_items=[{"price_data": {
-            "currency": "eur",
+            "currency": "gbp",
             "product_data": {"name": f"Readyourface.net — {p['label']}"},
-            "unit_amount": p["amount"],
+            "unit_amount": amount,
         }, "quantity": 1}],
         mode="payment",
         success_url=base + "/payment-success?session_id={CHECKOUT_SESSION_ID}&pack=" + pack,
